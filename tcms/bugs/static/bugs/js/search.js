@@ -52,6 +52,12 @@ export function pageBugsSearchReadyHandler () {
                 params.status_code = $('#id_status_code').val()
             }
 
+            if ($('#id_monday_filter').val() === 'synced') {
+                params.monday_subitem_id__isnull = false
+            } else if ($('#id_monday_filter').val() === 'not_synced') {
+                params.monday_subitem_id__isnull = true
+            }
+
             dataTableJsonRPC('Bug.filter', params, callback)
         },
         columns: [
@@ -79,6 +85,17 @@ export function pageBugsSearchReadyHandler () {
                         WONT_FIX: '<span class="label label-default" style="font-size: 11px;"><i class="fa fa-ban"></i> WONT FIX</span>'
                     }
                     return badges[status] || `<span class="label label-info">${status}</span>`
+                }
+            },
+            {
+                data: null,
+                render: function (data) {
+                    if (data.monday_url) {
+                        return `<a href="${data.monday_url}" target="_blank" class="btn btn-xs btn-info" style="background-color: #0073ea; border-color: #0073ea; font-size: 11px;" title="Owner: ${data.monday_owner || 'None'}">
+                            <i class="fa fa-external-link"></i> #${data.monday_subitem_id}
+                        </a>`
+                    }
+                    return '<span class="text-muted" style="font-size: 11px;">-</span>'
                 }
             },
             {

@@ -14,6 +14,16 @@ urlpatterns = [
     re_path(r"^search/$", views.Search.as_view(), name="bugs-search"),
     re_path(r"^comment/$", views.AddComment.as_view(), name="bugs-comment"),
     re_path(
+        r"^(?P<pk>\d+)/push-monday/$",
+        views.PushToMonday.as_view(),
+        name="bugs-push-monday",
+    ),
+    re_path(
+        r"^(?P<pk>\d+)/sync-monday/$",
+        views.SyncFromMonday.as_view(),
+        name="bugs-sync-monday",
+    ),
+    re_path(
         r"^webhook/monday/$",
         webhook_monday.monday_webhook_view,
         name="bugs-monday-webhook",

@@ -235,6 +235,68 @@ def update(execution_id, values, rpc_context=None):
 
     if form.is_valid():
         test_execution = form.save()
+
+        # Monday.com Retest Automation (playbookmonday.md section 4.1)
+        status_name = (
+            test_execution.status.name.upper()
+            if test_execution.status
+            else ""
+        )
+        if status_name in ["PASSED", "FAILED"]:
+            for bug in test_execution.bugs.all():
+                if bug.monday_subitem_id:
+                    try:
+                        from tcms.bugs.models import BugStatus
+                        from tcms.issuetracker.monday import Monday
+                        from tcms.testcases.models import BugSystem
+
+                        bug_system = BugSystem.objects.filter(
+                            tracker_type__icontains="Monday"
+                        ).first()
+                        if bug_system:
+                            tracker = Monday(bug_system, request)
+                            env_val = (
+                                test_execution.build.version.value
+                                if test_execution.build
+                                and test_execution.build.version
+                                else "Dev"
+                            )
+                            build_val = (
+                                test_execution.build.name
+                                if test_execution.build
+                                else "Latest"
+                            )
+                            retest_status = (
+                                "PASS" if status_name == "PASSED" else "FAIL"
+                            )
+                            note = (
+                                "Terverifikasi normal pada pengujian ulang."
+                                if retest_status == "PASS"
+                                else "Regresi: Issue masih terduplikasi pada pengujian ulang."
+                            )
+
+                            comment_html = f"""
+<p><b>Retest: {retest_status}</b><br>
+<b>Lingkungan:</b> {env_val} · <b>Build:</b> {build_val}<br>
+<b>Test case:</b> TC #{test_execution.case.pk} [{test_execution.case.summary}] · <b>Run:</b> #{test_execution.run.pk}<br>
+<b>Catatan:</b> {note}<br>
+<i>Diverifikasi oleh {request.user.username} via Kiwi TCMS</i></p>
+"""
+                            tracker._post_update(
+                                bug.monday_subitem_id, comment_html
+                            )
+
+                            if retest_status == "PASS":
+                                bug.status_code = BugStatus.RESOLVED
+                                bug.status = False
+                                bug.save()
+                                comments.add_comment(
+                                    [bug],
+                                    f"*Hasil Retest: PASS (Run #{test_execution.run.pk}) ➔ Status Bug diubah menjadi RESOLVED*",
+                                    request.user,
+                                )
+                    except Exception as err:
+                        pass
     else:
         raise ValueError(list(form.errors.items()))
 

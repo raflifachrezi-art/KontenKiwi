@@ -66,6 +66,26 @@ class Bug(models.Model, UrlMixin):
     executions = models.ManyToManyField("testruns.TestExecution", related_name="bugs")
     tags = models.ManyToManyField("management.Tag", related_name="bugs")
 
+    # Monday.com integration fields (playbookmonday.md)
+    monday_subitem_id = models.CharField(
+        max_length=64, blank=True, null=True, db_index=True
+    )
+    monday_parent_id = models.CharField(
+        max_length=64, blank=True, null=True
+    )
+    monday_url = models.URLField(
+        blank=True, null=True
+    )
+    monday_phase = models.CharField(
+        max_length=64, blank=True, null=True
+    )
+    monday_status = models.CharField(
+        max_length=64, blank=True, null=True, default=""
+    )
+    monday_owner = models.CharField(
+        max_length=128, blank=True, null=True
+    )
+
     def __str__(self):
         return f"BUG-{self.pk}: {self.summary} "
 

@@ -31,24 +31,26 @@ class NewBugForm(forms.ModelForm):
     text = forms.CharField(
         widget=SimpleMDE(),
         required=False,
-        initial=_("""Description of problem:
+        initial=_("""**Ruang Lingkup:** Modul <Modul> · <Platform: Web/Mobile> · Role <Role: Clipper/Brand/Admin> · Severity <Severity>
+**Lingkungan:** Dev · Version 1.0.0 · Build <Build>
+**Perangkat:** <Browser dan OS / Model Perangkat>
 
+### Langkah Reproduksi
+| No | Langkah |
+|---|---|
+| 1 |  |
+| 2 |  |
 
-How often reproducible:
+### Hasil Aktual
+<deskripsikan temuan bug yang terjadi>
 
+### Hasil yang Diharapkan
+<perilaku yang benar sesuai acuan Test Case / Dokumen>
 
-Steps to Reproduce:
-1.
-2.
-3.
-
-Actual results:
-
-
-Expected results:
-
-
-Additional info:"""),
+### Informasi Tambahan
+- **Frekuensi:** selalu
+- **Test case terkait:** TC #
+- **Fitur terkait:** Monday item - """),
     )
 
     def __init__(self, *args, **kwargs):

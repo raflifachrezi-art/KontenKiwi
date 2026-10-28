@@ -16,7 +16,9 @@ from guardian.decorators import permission_required as object_permission_require
 from tcms.bugs.forms import BugCommentForm, NewBugForm
 from tcms.bugs.models import Bug, BugStatus
 from tcms.core.helpers.comments import add_comment
+from tcms.issuetracker.monday import Monday
 from tcms.management.models import Component
+from tcms.testcases.models import BugSystem
 
 
 @method_decorator(
@@ -269,3 +271,55 @@ class Search(TemplateView):
         form.populate(self.request.GET.get("product", -1))
 
         return {"form": form}
+
+
+@method_decorator(permission_required("bugs.change_bug"), name="dispatch")
+class PushToMonday(View):
+    def post(self, request, pk):
+        bug = Bug.objects.get(pk=pk)
+        bug_system = BugSystem.objects.filter(
+            tracker_type__icontains="Monday"
+        ).first()
+        if not bug_system:
+            bug_system, _ = BugSystem.objects.get_or_create(
+                name="Monday.com (Konten)",
+                defaults={
+                    "base_url": "https://konten.monday.com",
+                    "tracker_type": "tcms.issuetracker.monday.Monday",
+                    "description": "Monday.com Development Timeline",
+                },
+            )
+        tracker = Monday(bug_system, request)
+        res = tracker.push_bug_to_monday(bug, request.user)
+        add_comment(
+            [bug],
+            f"*Bug ditautkan ke Monday.com Subitem #{res['subitem_id']} ({res['phase']}, Owner: {res['owner'] or 'None'})*",
+            request.user,
+        )
+
+        return HttpResponseRedirect(reverse("bugs-get", args=[bug.pk]))
+
+
+@method_decorator(permission_required("bugs.change_bug"), name="dispatch")
+class SyncFromMonday(View):
+    def post(self, request, pk):
+        bug = Bug.objects.get(pk=pk)
+        if bug.monday_url:
+            bug_system = BugSystem.objects.filter(
+                tracker_type__icontains="Monday"
+            ).first()
+            if not bug_system:
+                bug_system, _ = BugSystem.objects.get_or_create(
+                    name="Monday.com (Konten)",
+                    defaults={
+                        "base_url": "https://konten.monday.com",
+                        "tracker_type": "tcms.issuetracker.monday.Monday",
+                    },
+                )
+            tracker = Monday(bug_system, request)
+            details = tracker.details(bug.monday_url)
+            if details and details.get("status"):
+                bug.monday_status = details["status"]
+                bug.save()
+        return HttpResponseRedirect(reverse("bugs-get", args=[bug.pk]))
+

@@ -36,6 +36,32 @@
         <span class="label {{ object.status_badge_class }}" style="font-size: 14px; vertical-align: middle; margin-left: 8px;">
             <i class="{{ object.status_badge_icon }}"></i> {{ object.status_label }}
         </span>
+
+        <!-- Monday.com Integration Actions (playbookmonday.md) -->
+        <span class="kiwi-float-right" style="margin-top: 5px;">
+            {% if object.monday_url %}
+                <a href="{{ object.monday_url }}" target="_blank" class="btn btn-sm btn-info" style="background-color: #0073ea; border-color: #0073ea;">
+                    <i class="fa fa-external-link"></i> Monday #{{ object.monday_subitem_id }}
+                    {% if object.monday_phase %}<span class="badge" style="background: rgba(255,255,255,0.3);">{{ object.monday_phase }}</span>{% endif %}
+                </a>
+                <span class="label label-default" style="font-size: 12px; vertical-align: middle; padding: 5px 8px;">
+                    <i class="fa fa-tasks"></i> {{ object.monday_status|default:'Belum dimulai' }}
+                </span>
+                <form method="post" action="{% url 'bugs-sync-monday' object.pk %}" style="display: inline-block;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-default" title="{% trans 'Refresh Monday Status' %}">
+                        <i class="fa fa-refresh"></i>
+                    </button>
+                </form>
+            {% else %}
+                <form method="post" action="{% url 'bugs-push-monday' object.pk %}" style="display: inline-block;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-primary" title="{% trans 'Push to Monday Subitem (Playbook Rules: Mobile Ridwan / Web)' %}">
+                        <i class="fa fa-cloud-upload"></i> {% trans "Push to Monday Subitem" %}
+                    </button>
+                </form>
+            {% endif %}
+        </span>
     </h1>
 
     <div class="row row-cards-pf">
