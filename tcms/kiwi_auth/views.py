@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model, views
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import PermissionDenied
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -146,14 +146,160 @@ class Confirm(RedirectView):  # pylint: disable=missing-permission-required
         return super().get_redirect_url(*args, **kwargs)
 
 
-class Profile(View):  # pylint: disable=missing-permission-required
-    """Show user profiles"""
+@method_decorator(login_required, name="dispatch")
+class Profile(View):
+    """Show and edit user profile including personal Monday.com integration settings."""
 
-    http_method_names = ["get"]
+    template_name = "accounts/profile.html"
+    http_method_names = ["get", "post"]
 
-    def get(self, request, pk):  # pylint: disable=no-self-use
+    def get(self, request, pk):
         user = get_object_or_404(User, pk=pk)
-        return HttpResponseRedirect(reverse("admin:auth_user_change", args=[user.pk]))
+
+        # Check permissions: owner or auth.view_user perm or superuser
+        is_owner = request.user.pk == user.pk
+        has_view = (
+            request.user.has_perm("auth.view_user") or request.user.is_superuser
+        )
+        if not is_owner and not has_view:
+            return HttpResponseForbidden(
+                _("You do not have permission to view this profile.")
+            )
+
+        can_edit = (
+            is_owner
+            or request.user.has_perm("auth.change_user")
+            or request.user.is_superuser
+        )
+        from tcms.kiwi_auth.models import get_user_profile
+
+        profile = get_user_profile(user)
+        form = forms.UserProfileForm(user=user)
+
+        context = {
+            "target_user": user,
+            "profile": profile,
+            "form": form,
+            "can_edit": can_edit,
+            "is_owner": is_owner,
+        }
+        return render(request, self.template_name, context)
+
+    def post(self, request, pk):
+        user = get_object_or_404(User, pk=pk)
+        is_owner = request.user.pk == user.pk
+        can_edit = (
+            is_owner
+            or request.user.has_perm("auth.change_user")
+            or request.user.is_superuser
+        )
+        if not can_edit:
+            return HttpResponseForbidden(
+                _("You do not have permission to edit this profile.")
+            )
+
+        form = forms.UserProfileForm(user=user, data=request.POST)
+        if form.is_valid():
+            form.save()
+            messages.add_message(
+                request,
+                messages.SUCCESS,
+                _("Profil dan pengaturan Monday.com berhasil diperbarui."),
+            )
+            return HttpResponseRedirect(reverse("tcms-profile", args=[user.pk]))
+
+        from tcms.kiwi_auth.models import get_user_profile
+
+        profile = get_user_profile(user)
+        context = {
+            "target_user": user,
+            "profile": profile,
+            "form": form,
+            "can_edit": can_edit,
+            "is_owner": is_owner,
+        }
+        return render(request, self.template_name, context)
+
+
+@method_decorator(login_required, name="dispatch")
+class TestMondayToken(View):
+    """AJAX endpoint to test Monday.com API Token connectivity."""
+
+    def post(self, request, pk):
+        import json
+        import requests
+
+        user = get_object_or_404(User, pk=pk)
+        if request.user.pk != user.pk and not request.user.is_superuser:
+            return HttpResponseForbidden("Forbidden")
+
+        data = {}
+        if request.body:
+            try:
+                data = json.loads(request.body.decode("utf-8"))
+            except Exception:
+                pass
+        token = data.get("token") or request.POST.get("token")
+        if not token:
+            from tcms.kiwi_auth.models import get_user_profile
+
+            profile = get_user_profile(user)
+            token = profile.monday_api_token
+
+        if not token:
+            return JsonResponse(
+                {"status": "error", "message": "Token Monday.com belum diisi!"},
+                status=400,
+            )
+
+        # Test GraphQL query to Monday API
+        query = "query { me { id name email is_guest is_view_only } }"
+        try:
+            resp = requests.post(
+                "https://api.monday.com/v2",
+                headers={
+                    "Authorization": token.strip(),
+                    "Content-Type": "application/json",
+                    "API-Version": "2024-10",
+                },
+                json={"query": query},
+                timeout=10,
+            )
+            result = resp.json()
+            if "errors" in result:
+                err_msg = ", ".join(
+                    e.get("message", "Unknown error") for e in result["errors"]
+                )
+                return JsonResponse(
+                    {"status": "error", "message": f"Monday API Error: {err_msg}"},
+                    status=400,
+                )
+
+            me = result.get("data", {}).get("me")
+            if not me:
+                return JsonResponse(
+                    {
+                        "status": "error",
+                        "message": "Respon tidak memiliki data user (token tidak valid).",
+                    },
+                    status=400,
+                )
+
+            return JsonResponse(
+                {
+                    "status": "success",
+                    "user": {
+                        "id": me.get("id"),
+                        "name": me.get("name"),
+                        "email": me.get("email"),
+                    },
+                }
+            )
+        except Exception as exc:
+            return JsonResponse(
+                {"status": "error", "message": f"Koneksi gagal: {str(exc)}"},
+                status=500,
+            )
 
 
 @method_decorator(login_required, name="dispatch")

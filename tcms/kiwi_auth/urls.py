@@ -12,6 +12,11 @@ urlpatterns = [
         name="tcms-profile",
     ),
     re_path(
+        r"^(?P<pk>\d+)/test-monday/$",
+        views.TestMondayToken.as_view(),
+        name="tcms-profile-test-monday",
+    ),
+    re_path(
         r"^confirm/(?P<activation_key>[A-Za-z0-9\-]+)/$",
         views.Confirm.as_view(),
         name="tcms-confirm",

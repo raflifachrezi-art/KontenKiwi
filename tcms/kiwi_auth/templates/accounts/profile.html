@@ -1,0 +1,399 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans "User Profile" %}: {{ target_user.username }}{% endblock %}
+{% block page_id %}page-user-profile{% endblock %}
+{% block body_class %}cards-pf{% endblock %}
+
+{% block head %}
+<style>
+    .profile-header {
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    .profile-avatar-circle {
+        display: inline-block;
+        width: 48px;
+        height: 48px;
+        line-height: 48px;
+        border-radius: 50%;
+        background-color: #0073ea;
+        color: white;
+        text-align: center;
+        font-size: 20px;
+        font-weight: bold;
+        vertical-align: middle;
+        margin-right: 12px;
+    }
+    .profile-nav-tabs {
+        margin-top: 15px;
+        margin-bottom: 25px;
+    }
+    .profile-nav-tabs > li > a {
+        font-size: 15px;
+        font-weight: 600;
+        padding: 10px 20px;
+    }
+    .monday-guide-box {
+        background-color: #f5f9ff;
+        border-left: 4px solid #0073ea;
+        padding: 12px 16px;
+        margin-bottom: 20px;
+        border-radius: 2px;
+    }
+</style>
+{% endblock %}
+
+{% block contents %}
+<div class="container-fluid container-cards-pf">
+    <div class="profile-header">
+        <div class="row">
+            <div class="col-md-8">
+                <h1 style="margin: 0; display: inline-block; vertical-align: middle;">
+                    <div class="profile-avatar-circle">{{ target_user.username|slice:":1"|upper }}</div>
+                    {{ target_user.get_full_name|default:target_user.username }}
+                    <small style="font-size: 16px; margin-left: 8px;">(@{{ target_user.username }})</small>
+                </h1>
+                <div style="margin-top: 8px; margin-left: 60px;">
+                    {% if target_user.is_superuser %}
+                        <span class="label label-danger">Superuser</span>
+                    {% endif %}
+                    {% if target_user.is_staff %}
+                        <span class="label label-primary">Staff</span>
+                    {% endif %}
+                    {% for g in target_user.groups.all %}
+                        <span class="label label-info">{{ g.name }}</span>
+                    {% endfor %}
+                    {% if not is_owner %}
+                        <span class="label label-warning"><i class="fa fa-eye"></i> Viewing as Admin</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-4 text-right" style="margin-top: 10px;">
+                {% if is_owner %}
+                    <a href="{% url 'admin:password_change' %}" class="btn btn-default btn-sm">
+                        <i class="fa fa-key"></i> {% trans "Change password" %}
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-tabs profile-nav-tabs" role="tablist">
+        <li role="presentation" class="active">
+            <a href="#tab-profile" aria-controls="tab-profile" role="tab" data-toggle="tab">
+                <i class="fa fa-user"></i> {% trans "Informasi Akun" %}
+            </a>
+        </li>
+        <li role="presentation">
+            <a href="#tab-monday" aria-controls="tab-monday" role="tab" data-toggle="tab">
+                <i class="fa fa-tasks" style="color: #0073ea;"></i> <strong>{% trans "Integrasi Monday.com (Personal)" %}</strong>
+                {% if profile.monday_api_token %}
+                    <span class="badge" style="background-color: #3f9c35; margin-left: 5px;">Tersambung</span>
+                {% else %}
+                    <span class="badge" style="background-color: #8b8d8f; margin-left: 5px;">Belum Diatur</span>
+                {% endif %}
+            </a>
+        </li>
+    </ul>
+
+    <form method="post" action="{% url 'tcms-profile' target_user.pk %}" class="form-horizontal">
+        {% csrf_token %}
+
+        <div class="tab-content">
+            <!-- TAB 1: INFORMASI AKUN -->
+            <div role="tabpanel" class="tab-pane active" id="tab-profile">
+                <div class="row">
+                    <div class="col-md-8 col-lg-7">
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <h3 class="panel-title"><i class="fa fa-id-card-o"></i> {% trans "Detail Profil" %}</h3>
+                            </div>
+                            <div class="panel-body">
+                                <div class="form-group">
+                                    <label class="col-sm-3 control-label">{% trans "Username" %}</label>
+                                    <div class="col-sm-9">
+                                        <input type="text" class="form-control" value="{{ target_user.username }}" readonly disabled>
+                                    </div>
+                                </div>
+
+                                <div class="form-group {% if form.first_name.errors %}has-error{% endif %}">
+                                    <label class="col-sm-3 control-label" for="id_first_name">{% trans "First name" %}</label>
+                                    <div class="col-sm-9">
+                                        {{ form.first_name }}
+                                        {% if form.first_name.errors %}
+                                            <span class="help-block">{{ form.first_name.errors.0 }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="form-group {% if form.last_name.errors %}has-error{% endif %}">
+                                    <label class="col-sm-3 control-label" for="id_last_name">{% trans "Last name" %}</label>
+                                    <div class="col-sm-9">
+                                        {{ form.last_name }}
+                                        {% if form.last_name.errors %}
+                                            <span class="help-block">{{ form.last_name.errors.0 }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="form-group {% if form.email.errors %}has-error{% endif %}">
+                                    <label class="col-sm-3 control-label" for="id_email">{% trans "Email" %}</label>
+                                    <div class="col-sm-9">
+                                        {{ form.email }}
+                                        {% if form.email.errors %}
+                                            <span class="help-block">{{ form.email.errors.0 }}</span>
+                                        {% endif %}
+                                        <span class="help-block" style="font-size: 12px; margin-top: 4px;">
+                                            <a href="{% url 'reset-user-email' target_user.pk %}"><i class="fa fa-envelope-o"></i> {% trans "Reset email address" %}</a>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4 col-lg-5">
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <h3 class="panel-title"><i class="fa fa-info-circle"></i> {% trans "Aktivitas Akun" %}</h3>
+                            </div>
+                            <div class="panel-body">
+                                <p><strong>{% trans "Tanggal Bergabung" %}:</strong><br>
+                                    <i class="fa fa-calendar-o"></i> {{ target_user.date_joined|date:"d M Y, H:i" }}
+                                </p>
+                                <p><strong>{% trans "Login Terakhir" %}:</strong><br>
+                                    <i class="fa fa-clock-o"></i> {{ target_user.last_login|date:"d M Y, H:i"|default:_("Belum pernah login") }}
+                                </p>
+                                <p><strong>{% trans "Status Akun" %}:</strong><br>
+                                    {% if target_user.is_active %}
+                                        <span class="label label-success"><i class="fa fa-check"></i> Aktif</span>
+                                    {% else %}
+                                        <span class="label label-danger"><i class="fa fa-times"></i> Nonaktif</span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: INTEGRASI MONDAY.COM (PERSONAL) -->
+            <div role="tabpanel" class="tab-pane" id="tab-monday">
+                <div class="row">
+                    <div class="col-md-8 col-lg-7">
+                        <div class="monday-guide-box">
+                            <h4 style="margin-top: 0; color: #0073ea;">
+                                <i class="fa fa-shield"></i> <strong>Akses Personal Monday.com</strong>
+                            </h4>
+                            <p style="margin-bottom: 0;">
+                                Setiap anggota QA / Engineer memiliki token Monday.com tersendiri. Ketika Anda menautkan atau membuat (push) bug ke Monday.com, aksi tersebut akan dieksekusi atas nama akun Monday Anda.
+                            </p>
+                        </div>
+
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <h3 class="panel-title">
+                                    <i class="fa fa-sliders"></i> {% trans "Konfigurasi Kredensial Monday.com" %}
+                                    <span class="pull-right">
+                                        {% if profile.monday_api_token %}
+                                            <span class="label label-success"><i class="fa fa-check"></i> Aktif</span>
+                                        {% else %}
+                                            <span class="label label-default">Belum ada token</span>
+                                        {% endif %}
+                                    </span>
+                                </h3>
+                            </div>
+                            <div class="panel-body">
+                                <div class="form-group {% if form.monday_api_token.errors %}has-error{% endif %}">
+                                    <label class="col-sm-4 control-label" for="id_monday_api_token">
+                                        {% trans "Personal API Token" %} <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="col-sm-8">
+                                        <div class="input-group">
+                                            {{ form.monday_api_token }}
+                                            <span class="input-group-btn">
+                                                <button class="btn btn-default" type="button" id="btn-toggle-token" title="Lihat/Sembunyikan Token">
+                                                    <i class="fa fa-eye" id="toggle-token-icon"></i>
+                                                </button>
+                                            </span>
+                                        </div>
+                                        {% if form.monday_api_token.errors %}
+                                            <span class="help-block">{{ form.monday_api_token.errors.0 }}</span>
+                                        {% endif %}
+                                        <span class="help-block" style="font-size: 12px;">
+                                            {{ form.monday_api_token.help_text }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="form-group {% if form.monday_user_id.errors %}has-error{% endif %}">
+                                    <label class="col-sm-4 control-label" for="id_monday_user_id">
+                                        {% trans "Monday User ID" %}
+                                    </label>
+                                    <div class="col-sm-8">
+                                        {{ form.monday_user_id }}
+                                        {% if form.monday_user_id.errors %}
+                                            <span class="help-block">{{ form.monday_user_id.errors.0 }}</span>
+                                        {% endif %}
+                                        <span class="help-block" style="font-size: 12px;">
+                                            {{ form.monday_user_id.help_text }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <hr>
+
+                                <div class="form-group">
+                                    <div class="col-sm-offset-4 col-sm-8">
+                                        <button type="button" id="btn-test-monday" class="btn btn-info btn-sm">
+                                            <i class="fa fa-plug"></i> <span id="test-btn-text">Test Koneksi Monday.com</span>
+                                        </button>
+                                        <div id="monday-test-result" style="margin-top: 12px; display: none;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4 col-lg-5">
+                        <div class="panel panel-info">
+                            <div class="panel-heading">
+                                <h3 class="panel-title"><i class="fa fa-question-circle"></i> Cara Mendapatkan Token Monday</h3>
+                            </div>
+                            <div class="panel-body">
+                                <ol style="padding-left: 20px; margin-bottom: 0;">
+                                    <li style="margin-bottom: 8px;">Buka akun <a href="https://konten.monday.com" target="_blank" rel="noopener">Monday.com</a> Anda.</li>
+                                    <li style="margin-bottom: 8px;">Klik <strong>Avatar Profil</strong> di pojok kiri bawah.</li>
+                                    <li style="margin-bottom: 8px;">Pilih menu <strong>Developers</strong> (atau <strong>Admin &gt; API</strong>).</li>
+                                    <li style="margin-bottom: 8px;">Buka tab <strong>Developer</strong> &gt; <strong>My Access Tokens</strong>.</li>
+                                    <li style="margin-bottom: 8px;">Klik <strong>Show</strong> atau <strong>Generate</strong>, salin token tersebut, lalu tempel di kolom Personal API Token.</li>
+                                    <li>Klik tombol <strong>Test Koneksi</strong> untuk memverifikasi token sebelum menyimpan.</li>
+                                </ol>
+                            </div>
+                        </div>
+
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <h3 class="panel-title"><i class="fa fa-sitemap"></i> Target Workspace & Board</h3>
+                            </div>
+                            <div class="panel-body" style="font-size: 13px;">
+                                <p><strong>Workspace:</strong> Konten.com: Development (<code>3259533</code>)</p>
+                                <p><strong>Board:</strong> Development Timeline (<code>5030095856</code>)</p>
+                                <p><strong>Subitems Board:</strong> <code>5030095857</code></p>
+                                <p class="text-muted" style="margin-bottom: 0;">
+                                    <em>*Pastikan akun Monday Anda terdaftar sebagai Member di board tersebut agar memiliki hak akses tulis.</em>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="row" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+            <div class="col-md-12">
+                {% if can_edit %}
+                    <button type="submit" name="_save" class="btn btn-primary btn-lg">
+                        <i class="fa fa-save"></i> {% trans "Simpan Profil" %}
+                    </button>
+                {% endif %}
+                <a href="/" class="btn btn-default btn-lg" style="margin-left: 8px;">
+                    {% trans "Kembali" %}
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+$(document).ready(function() {
+    // 1. Toggle Show / Hide Password for Token
+    $('#btn-toggle-token').on('click', function() {
+        var input = $('#id_monday_api_token');
+        var icon = $('#toggle-token-icon');
+        if (input.attr('type') === 'password') {
+            input.attr('type', 'text');
+            icon.removeClass('fa-eye').addClass('fa-eye-slash');
+        } else {
+            input.attr('type', 'password');
+            icon.removeClass('fa-eye-slash').addClass('fa-eye');
+        }
+    });
+
+    // 2. Test Monday Token AJAX
+    $('#btn-test-monday').on('click', function() {
+        var token = $('#id_monday_api_token').val().trim();
+        var resultDiv = $('#monday-test-result');
+        var btn = $(this);
+        var btnText = $('#test-btn-text');
+
+        if (!token) {
+            resultDiv.html(
+                '<div class="alert alert-warning" style="margin-bottom:0; padding:8px 12px;">' +
+                '<i class="fa fa-warning"></i> Silakan masukkan token terlebih dahulu!' +
+                '</div>'
+            ).slideDown();
+            return;
+        }
+
+        btn.prop('disabled', true);
+        btnText.text('Menghubungkan ke Monday...');
+        resultDiv.slideUp();
+
+        var csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
+
+        $.ajax({
+            url: "{% url 'tcms-profile-test-monday' target_user.pk %}",
+            type: "POST",
+            contentType: "application/json",
+            headers: { "X-CSRFToken": csrfToken },
+            data: JSON.stringify({ token: token }),
+            success: function(response) {
+                btn.prop('disabled', false);
+                btnText.text('Test Koneksi Monday.com');
+                if (response.status === 'success' && response.user) {
+                    // Auto-fill Monday User ID if empty
+                    var currentUserId = $('#id_monday_user_id').val();
+                    if (!currentUserId && response.user.id) {
+                        $('#id_monday_user_id').val(response.user.id);
+                    }
+
+                    resultDiv.html(
+                        '<div class="alert alert-success" style="margin-bottom:0; padding:10px 14px;">' +
+                        '<i class="fa fa-check-circle"></i> <strong>Koneksi Berhasil!</strong><br>' +
+                        'Terhubung sebagai: <strong>' + response.user.name + '</strong> (' + response.user.email + ')<br>' +
+                        'Monday User ID: <code>' + response.user.id + '</code>' +
+                        '</div>'
+                    ).slideDown();
+                } else {
+                    resultDiv.html(
+                        '<div class="alert alert-danger" style="margin-bottom:0; padding:10px 14px;">' +
+                        '<i class="fa fa-times-circle"></i> <strong>Koneksi Gagal:</strong> ' +
+                        (response.message || 'Terjadi kesalahan tidak dikenal.') +
+                        '</div>'
+                    ).slideDown();
+                }
+            },
+            error: function(xhr) {
+                btn.prop('disabled', false);
+                btnText.text('Test Koneksi Monday.com');
+                var err = 'Gagal menghubungi server.';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    err = xhr.responseJSON.message;
+                }
+                resultDiv.html(
+                    '<div class="alert alert-danger" style="margin-bottom:0; padding:10px 14px;">' +
+                    '<i class="fa fa-times-circle"></i> <strong>Koneksi Gagal:</strong> ' + err +
+                    '</div>'
+                ).slideDown();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

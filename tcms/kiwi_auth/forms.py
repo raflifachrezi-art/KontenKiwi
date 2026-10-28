@@ -141,3 +141,90 @@ class ResetUserEmailForm(forms.Form):  # pylint: disable=must-inherit-from-model
         if email_01 and email_02 and email_01 != email_02:
             raise forms.ValidationError(_("Email mismatch"))
         return email_02
+
+
+class UserProfileForm(forms.Form):
+    first_name = forms.CharField(
+        label=_("First name"),
+        max_length=150,
+        required=False,
+        widget=forms.TextInput(
+            attrs={"class": "form-control", "placeholder": _("First name")}
+        ),
+    )
+    last_name = forms.CharField(
+        label=_("Last name"),
+        max_length=150,
+        required=False,
+        widget=forms.TextInput(
+            attrs={"class": "form-control", "placeholder": _("Last name")}
+        ),
+    )
+    email = forms.EmailField(
+        label=_("Email address"),
+        required=True,
+        widget=forms.EmailInput(
+            attrs={"class": "form-control", "placeholder": "email@example.com"}
+        ),
+    )
+    monday_api_token = forms.CharField(
+        label=_("Monday.com Personal API Token"),
+        required=False,
+        widget=forms.PasswordInput(
+            render_value=True,
+            attrs={
+                "class": "form-control",
+                "placeholder": "eyJhbGciOi...",
+                "autocomplete": "new-password",
+                "id": "id_monday_api_token",
+            },
+        ),
+        help_text=_(
+            "Personal API Token dari akun Monday.com Anda (Avatar > Developers > My Access Tokens)."
+        ),
+    )
+    monday_user_id = forms.CharField(
+        label=_("Monday.com User ID"),
+        max_length=64,
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "e.g. 115783524",
+                "id": "id_monday_user_id",
+            }
+        ),
+        help_text=_(
+            "User ID Monday.com (misal 115783524) untuk penugasan / identifikasi."
+        ),
+    )
+
+    def __init__(self, user, *args, **kwargs):
+        self.user = user
+        from tcms.kiwi_auth.models import get_user_profile
+
+        self.profile = get_user_profile(user)
+        initial = kwargs.get("initial", {})
+        initial.update(
+            {
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "email": user.email,
+                "monday_api_token": self.profile.monday_api_token or "",
+                "monday_user_id": self.profile.monday_user_id or "",
+            }
+        )
+        kwargs["initial"] = initial
+        super().__init__(*args, **kwargs)
+
+    def save(self):
+        self.user.first_name = self.cleaned_data.get("first_name", "")
+        self.user.last_name = self.cleaned_data.get("last_name", "")
+        self.user.email = self.cleaned_data.get("email", "")
+        self.user.save()
+
+        token = self.cleaned_data.get("monday_api_token", "")
+        self.profile.monday_api_token = token.strip() if token else ""
+        self.profile.monday_user_id = self.cleaned_data.get("monday_user_id", "").strip()
+        self.profile.save()
+        return self.user

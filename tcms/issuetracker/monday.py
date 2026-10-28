@@ -125,12 +125,28 @@ class Monday(IssueTrackerType):
 
     @property
     def api_token(self):
+        # 1. User profile token (from self.user or self.request.user)
+        user = getattr(self, "user", None)
+        if not user and self.request and hasattr(self.request, "user") and self.request.user.is_authenticated:
+            user = self.request.user
+
+        if user:
+            profile = getattr(user, "profile", None)
+            if profile and profile.monday_api_token:
+                return profile.monday_api_token.strip()
+
+        # 2. BugSystem credentials
         _, api_password = self.rpc_credentials
-        return api_password or getattr(
+        if api_password:
+            return api_password.strip()
+
+        # 3. Settings / environment variable fallback
+        token = getattr(
             settings,
             "MONDAY_API_TOKEN",
             getattr(self.bug_system, "api_password", ""),
         )
+        return str(token).strip()
 
     @property
     def board_id(self):
@@ -239,6 +255,14 @@ class Monday(IssueTrackerType):
         sets Phase, writes Comment 1 (Link) & Comment 2 (Detail),
         and updates the Bug model.
         """
+        if user:
+            self.user = user
+
+        if not self.api_token:
+            raise RuntimeError(
+                "Token Monday.com belum diatur di profil Anda! Silakan buka menu [My Profile] > tab [Integrasi Monday.com] untuk memasukkan Personal API Token Anda."
+            )
+
         parent_id, owner_id, owner_name, platform = (
             resolve_monday_parent_and_owner(bug.product.name)
         )

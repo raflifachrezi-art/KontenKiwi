@@ -290,12 +290,34 @@ class PushToMonday(View):
                 },
             )
         tracker = Monday(bug_system, request)
-        res = tracker.push_bug_to_monday(bug, request.user)
-        add_comment(
-            [bug],
-            f"*Bug ditautkan ke Monday.com Subitem #{res['subitem_id']} ({res['phase']}, Owner: {res['owner'] or 'None'})*",
-            request.user,
-        )
+        if not tracker.api_token:
+            messages.add_message(
+                request,
+                messages.ERROR,
+                _(
+                    "Token Monday.com belum diatur di profil Anda. Silakan isi token di tab Integrasi Monday.com pada profil Anda."
+                ),
+            )
+            return HttpResponseRedirect(reverse("tcms-profile", args=[request.user.pk]))
+
+        try:
+            res = tracker.push_bug_to_monday(bug, request.user)
+            add_comment(
+                [bug],
+                f"*Bug ditautkan ke Monday.com Subitem #{res['subitem_id']} ({res['phase']}, Owner: {res['owner'] or 'None'})*",
+                request.user,
+            )
+            messages.add_message(
+                request,
+                messages.SUCCESS,
+                _(f"Berhasil menautkan ke Monday.com Subitem #{res['subitem_id']}"),
+            )
+        except Exception as exc:
+            messages.add_message(
+                request,
+                messages.ERROR,
+                _(f"Gagal push ke Monday.com: {str(exc)}"),
+            )
 
         return HttpResponseRedirect(reverse("bugs-get", args=[bug.pk]))
 
@@ -317,9 +339,30 @@ class SyncFromMonday(View):
                     },
                 )
             tracker = Monday(bug_system, request)
-            details = tracker.details(bug.monday_url)
-            if details and details.get("status"):
-                bug.monday_status = details["status"]
-                bug.save()
+            try:
+                details = tracker.details(bug.monday_url)
+                if details and details.get("status"):
+                    old_status = bug.monday_status
+                    bug.monday_status = details["status"]
+                    bug.save()
+                    messages.add_message(
+                        request,
+                        messages.SUCCESS,
+                        _(
+                            f"Status Monday.com berhasil disinkronkan: '{old_status}' ➔ '{details['status']}'"
+                        ),
+                    )
+                else:
+                    messages.add_message(
+                        request,
+                        messages.WARNING,
+                        _("Status di Monday.com tidak berubah atau tidak ditemukan."),
+                    )
+            except Exception as exc:
+                messages.add_message(
+                    request,
+                    messages.ERROR,
+                    _(f"Gagal sinkronisasi dari Monday.com: {str(exc)}"),
+                )
         return HttpResponseRedirect(reverse("bugs-get", args=[bug.pk]))
 

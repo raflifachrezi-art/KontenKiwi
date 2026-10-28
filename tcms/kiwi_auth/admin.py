@@ -14,6 +14,7 @@ from django.utils.translation import gettext_lazy as _
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.debug import sensitive_post_parameters
 
+from tcms.kiwi_auth.models import UserProfile
 from tcms.utils import user as user_utils
 
 User = get_user_model()  # pylint: disable=invalid-name
@@ -21,6 +22,22 @@ User = get_user_model()  # pylint: disable=invalid-name
 
 def _modifying_myself(request, object_id):
     return request.user.pk == int(object_id)
+
+
+class UserProfileInline(admin.StackedInline):
+    model = UserProfile
+    can_delete = False
+    verbose_name = _("Monday.com Integration Profile")
+    verbose_name_plural = _("Monday.com Integration Profile")
+    fields = ("monday_api_token", "monday_user_id")
+
+    def has_view_permission(self, request, obj=None):
+        return True
+
+    def has_change_permission(self, request, obj=None):
+        if obj:
+            return _modifying_myself(request, getattr(obj, "pk", 0)) or super().has_change_permission(request, obj)
+        return True
 
 
 class GroupAdminForm(forms.ModelForm):
@@ -51,6 +68,7 @@ class GroupAdminForm(forms.ModelForm):
 
 
 class KiwiUserAdmin(UserAdmin):
+    inlines = [UserProfileInline]
     actions = ["deactivate_selected"]
     list_display = UserAdmin.list_display + (
         "is_active",
