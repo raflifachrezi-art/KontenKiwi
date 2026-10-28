@@ -10,6 +10,7 @@ dist/
 build/
 .venv/
 uploads/
+.env
 docs/source/*.dot
 docs/guide/target
 docs/target/
