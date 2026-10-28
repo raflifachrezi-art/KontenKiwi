@@ -5,7 +5,7 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
-from tcms.bugs.models import Bug, Severity
+from tcms.bugs.models import Bug, BugStatus, Severity
 from tcms.core.forms.fields import UserField
 from tcms.core.widgets import SimpleMDE
 from tcms.management.models import Build, Version
@@ -23,6 +23,7 @@ class NewBugForm(forms.ModelForm):
             "version",
             "build",
             "severity",
+            "status_code",
         ]
 
     assignee = UserField(required=False)
@@ -89,6 +90,11 @@ class NewBugFromRPCForm(NewBugForm):
 class BugCommentForm(forms.Form):  # pylint: disable=must-inherit-from-model-form
     bug = forms.ModelChoiceField(
         queryset=Bug.objects.all(),
+    )
+
+    status_code = forms.ChoiceField(
+        choices=BugStatus.choices,
+        required=False,
     )
 
     text = forms.CharField(

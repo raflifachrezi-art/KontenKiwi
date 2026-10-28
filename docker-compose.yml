@@ -9,8 +9,7 @@ services:
     network_mode: host
     volumes:
       - ./uploads:/Kiwi/uploads:Z
-      # Uncomment the line below for live code/template development without rebuilding the image:
-      # - ./tcms:/venv/lib64/python3.12/site-packages/tcms:Z
+      - ./tcms:/venv/lib64/python3.12/site-packages/tcms:Z
     environment:
       KIWI_DB_ENGINE: django.db.backends.postgresql
       KIWI_DB_HOST: ${POSTGRES_HOST:-127.0.0.1}

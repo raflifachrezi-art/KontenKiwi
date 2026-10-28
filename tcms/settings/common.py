@@ -523,6 +523,7 @@ EXTERNAL_BUG_TRACKERS = [
     "tcms.issuetracker.types.GitHub",
     "tcms.issuetracker.types.Gitlab",
     "tcms.issuetracker.types.Redmine",
+    "tcms.issuetracker.monday.Monday",
 ]
 if "tcms.bugs.apps.AppConfig" in INSTALLED_APPS:
     EXTERNAL_BUG_TRACKERS.append("tcms.issuetracker.types.KiwiTCMS")

@@ -24,11 +24,26 @@ class Severity(models.Model):
         verbose_name_plural = _("Severity")
 
 
+class BugStatus(models.TextChoices):
+    OPEN = "OPEN", _("Open")
+    IN_PROGRESS = "IN_PROGRESS", _("In Progress")
+    STUCK = "STUCK", _("Stuck")
+    RESOLVED = "RESOLVED", _("Resolved")
+    CLOSED = "CLOSED", _("Closed")
+    WONT_FIX = "WONT_FIX", _("Won't Fix")
+
+
 class Bug(models.Model, UrlMixin):
     summary = models.CharField(max_length=255, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
-    # True means bug is still open
+    # True means bug is still open (kept for backward compatibility)
     status = models.BooleanField(default=True, db_index=True)
+    status_code = models.CharField(
+        max_length=32,
+        choices=BugStatus.choices,
+        default=BugStatus.OPEN,
+        db_index=True,
+    )
 
     reporter = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="repoted_bugs"
@@ -53,6 +68,42 @@ class Bug(models.Model, UrlMixin):
 
     def __str__(self):
         return f"BUG-{self.pk}: {self.summary} "
+
+    def save(self, *args, **kwargs):
+        # Sync boolean status with status_code
+        if self.status_code in [BugStatus.CLOSED, BugStatus.RESOLVED, BugStatus.WONT_FIX]:
+            self.status = False
+        else:
+            self.status = True
+        super().save(*args, **kwargs)
+
+    @property
+    def status_label(self):
+        return dict(BugStatus.choices).get(self.status_code, self.status_code)
+
+    @property
+    def status_badge_class(self):
+        mapping = {
+            BugStatus.STUCK: "label-danger",
+            BugStatus.IN_PROGRESS: "label-warning",
+            BugStatus.OPEN: "label-primary",
+            BugStatus.RESOLVED: "label-success",
+            BugStatus.CLOSED: "label-default",
+            BugStatus.WONT_FIX: "label-default",
+        }
+        return mapping.get(self.status_code, "label-primary")
+
+    @property
+    def status_badge_icon(self):
+        mapping = {
+            BugStatus.STUCK: "fa fa-exclamation-triangle",
+            BugStatus.IN_PROGRESS: "fa fa-clock-o",
+            BugStatus.OPEN: "fa fa-envelope-open",
+            BugStatus.RESOLVED: "fa fa-check-circle",
+            BugStatus.CLOSED: "fa fa-times-circle",
+            BugStatus.WONT_FIX: "fa fa-ban",
+        }
+        return mapping.get(self.status_code, "fa fa-info-circle")
 
     def _get_absolute_url(self):
         return reverse(

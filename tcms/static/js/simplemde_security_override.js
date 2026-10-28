@@ -99,5 +99,36 @@ export function initSimpleMDE (textArea, fileUploadElement, autoSaveId = window.
         reader.readAsDataURL(attachment)
     })
 
+    // Enable direct Ctrl+V image paste from clipboard into markdown editor
+    simpleMDE.codemirror.on('paste', function (editor, event) {
+        const clipboardData = event.clipboardData || window.clipboardData
+        if (!clipboardData || !clipboardData.items) return
+
+        for (let i = 0; i < clipboardData.items.length; i++) {
+            const item = clipboardData.items[i]
+            if (item.type && item.type.indexOf('image') !== -1) {
+                event.preventDefault()
+                const file = item.getAsFile()
+                const filename = `screenshot_${Date.now()}.png`
+                const reader = new FileReader()
+                reader.onload = e => {
+                    const dataUri = e.target.result
+                    const b64content = dataUri.split('base64,')[1]
+                    jsonRPC('User.add_attachment', [filename, b64content], data => {
+                        const cm = simpleMDE.codemirror
+                        const endPoint = cm.getCursor('end')
+                        const text = `![${data.filename}](${data.url})\n`
+                        cm.replaceSelection(text)
+                        endPoint.ch += text.length
+                        cm.setSelection(endPoint, endPoint)
+                        cm.focus()
+                    })
+                }
+                reader.readAsDataURL(file)
+                break
+            }
+        }
+    })
+
     return simpleMDE
 }

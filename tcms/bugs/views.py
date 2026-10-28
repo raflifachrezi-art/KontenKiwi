@@ -14,7 +14,7 @@ from django.views.generic.edit import CreateView, UpdateView
 from guardian.decorators import permission_required as object_permission_required
 
 from tcms.bugs.forms import BugCommentForm, NewBugForm
-from tcms.bugs.models import Bug
+from tcms.bugs.models import Bug, BugStatus
 from tcms.core.helpers.comments import add_comment
 from tcms.management.models import Component
 
@@ -32,8 +32,9 @@ class Get(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["comment_form"] = BugCommentForm()
+        context["comment_form"] = BugCommentForm(initial={"status_code": self.object.status_code})
         context["comment_form"].populate(self.object.pk)
+        context["bug_statuses"] = BugStatus.choices
         context["executions"] = self.object.executions.all()
         context["OBJECT_MENU_ITEMS"] = [
             (
@@ -232,13 +233,26 @@ class AddComment(View):
             if form.cleaned_data["text"]:
                 add_comment([bug], form.cleaned_data["text"], request.user)
 
+            new_status = request.POST.get("status_code") or form.cleaned_data.get("status_code")
             if request_action == "close":
+                bug.status_code = BugStatus.CLOSED
                 bug.status = False
                 add_comment([bug], _("*bug closed*"), request.user)
 
-            if request_action == "reopen":
+            elif request_action == "reopen":
+                bug.status_code = BugStatus.OPEN
                 bug.status = True
                 add_comment([bug], _("*bug reopened*"), request.user)
+
+            elif new_status and new_status in BugStatus.values and new_status != bug.status_code:
+                old_status = bug.status_code
+                bug.status_code = new_status
+                if new_status in [BugStatus.CLOSED, BugStatus.RESOLVED, BugStatus.WONT_FIX]:
+                    bug.status = False
+                else:
+                    bug.status = True
+                add_comment([bug], _(f"*status changed: {old_status} ➔ {new_status}*"), request.user)
+
             bug.save()
 
             return HttpResponseRedirect(reverse("bugs-get", args=[bug.pk]))

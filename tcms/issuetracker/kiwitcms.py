@@ -46,7 +46,8 @@ class KiwiTCMS(IssueTrackerType):
             "description": render_to_string(
                 "include/bug_details.html", {"object": bug}
             ),
-            "status": _("Open") if bug.status else _("Closed"),
+            "status": bug.status_label,
+            "status_code": bug.status_code,
             "title": bug.summary,
             "url": url,
         }

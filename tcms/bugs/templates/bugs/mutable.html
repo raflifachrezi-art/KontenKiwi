@@ -98,6 +98,20 @@
                         type="text" class="form-control" placeholder="{% trans 'Username or email' %}">
                     {{ form.assignee.errors }}
                 </div>
+
+                <div class="col-md-1 col-lg-1">
+                    <label for="id_status_code">{% trans "Status" %}</label>
+                </div>
+                <div class="col-md-2 col-lg-2 {% if form.status_code.errors %}has-error{% endif %}">
+                    <select id="id_status_code" name="status_code" class="form-control selectpicker">
+                        {% for val, label in form.fields.status_code.choices %}
+                        <option value="{{ val }}" {% if val == form.status_code.value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {{ form.status_code.errors }}
+                </div>
             </div>
 
         {% if not object %}

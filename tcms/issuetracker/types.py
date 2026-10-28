@@ -16,6 +16,7 @@ from tcms.issuetracker.base import IssueTrackerType
 from tcms.issuetracker.bugzilla_integration import (  # noqa, pylint: disable=unused-import
     Bugzilla,
 )
+from tcms.issuetracker.monday import Monday  # noqa, pylint: disable=unused-import
 from tcms.utils.github import repo_id as github_repo_id
 
 # conditional import b/c this App can be disabled

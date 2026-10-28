@@ -1,6 +1,6 @@
 {% load i18n %}
 
-{% trans 'Status' %}: {% if object.status %}{% trans 'Open' %}{% else %}{% trans 'Closed' %}{% endif %}
+{% trans 'Status' %}: {{ object.status_label }}
 
 {% trans 'Created on' %}: {{ object.created_at }}
 

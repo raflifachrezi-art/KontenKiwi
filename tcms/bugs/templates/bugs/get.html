@@ -33,11 +33,9 @@
             data-perm-remove-tag="{{ perms.bugs.delete_bugtag }}"
         >BUG-{{ object.pk }}: {{ object.summary }}</span>
 
-        {% if object.status %}
-            <span class="fa fa-envelope-open-o" title="{% trans 'Open' %}"></span>
-        {% else %}
-            <span class="fa fa-times" title="{% trans 'Closed' %}"></span>
-        {% endif %}
+        <span class="label {{ object.status_badge_class }}" style="font-size: 14px; vertical-align: middle; margin-left: 8px;">
+            <i class="{{ object.status_badge_icon }}"></i> {{ object.status_label }}
+        </span>
     </h1>
 
     <div class="row row-cards-pf">
@@ -144,13 +142,32 @@
                     </div>
 
                     <div class="form-group">
+                        <label class="col-sm-2 control-label" for="id_status_code" style="text-align: left; padding-left: 0; font-weight: bold;">
+                            {% trans "Bug Status" %}:
+                        </label>
+                        <div class="col-sm-4" style="padding-left: 0;">
+                            <select name="status_code" id="id_status_code" class="form-control selectpicker">
+                                {% for code, label in bug_statuses %}
+                                <option value="{{ code }}" {% if object.status_code == code %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
                         <div>
-                            {% if not object.status %}
-                            <button type="submit" name="action" value="reopen" class="btn btn-warning btn-lg kiwi-float-right">{% trans "Reopen" %}</button>
-                            {% else %}
-                            <button type="submit" name="action" value="comment" class="btn btn-default btn-lg">{% trans "Save" %}</button>
+                            <button type="submit" name="action" value="comment" class="btn btn-primary btn-lg">
+                                <i class="fa fa-save"></i> {% trans "Save Comment & Status" %}
+                            </button>
+                            {% if object.status %}
                             <button type="submit" name="action" value="close" class="btn btn-danger btn-lg kiwi-float-right">
-                                {% trans "Close" %}
+                                <i class="fa fa-times-circle"></i> {% trans "Close Bug" %}
+                            </button>
+                            {% else %}
+                            <button type="submit" name="action" value="reopen" class="btn btn-warning btn-lg kiwi-float-right">
+                                <i class="fa fa-refresh"></i> {% trans "Reopen Bug" %}
                             </button>
                             {% endif %}
                         </div>

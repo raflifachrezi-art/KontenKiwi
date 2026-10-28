@@ -48,7 +48,9 @@ export function pageBugsSearchReadyHandler () {
                 params.created_at__gte = $('#id_after').data('DateTimePicker').date().format('YYYY-MM-DD 00:00:00')
             }
 
-            params.status = $('#id_status').is(':checked')
+            if ($('#id_status_code').val()) {
+                params.status_code = $('#id_status_code').val()
+            }
 
             dataTableJsonRPC('Bug.filter', params, callback)
         },
@@ -62,6 +64,21 @@ export function pageBugsSearchReadyHandler () {
                     }
 
                     return ''
+                }
+            },
+            {
+                data: null,
+                render: function (data) {
+                    const status = data.status_code || (data.status ? 'OPEN' : 'CLOSED')
+                    const badges = {
+                        STUCK: '<span class="label label-danger" style="font-size: 11px;"><i class="fa fa-exclamation-triangle"></i> STUCK</span>',
+                        IN_PROGRESS: '<span class="label label-warning" style="font-size: 11px;"><i class="fa fa-clock-o"></i> IN PROGRESS</span>',
+                        OPEN: '<span class="label label-primary" style="font-size: 11px;"><i class="fa fa-envelope-open"></i> OPEN</span>',
+                        RESOLVED: '<span class="label label-success" style="font-size: 11px;"><i class="fa fa-check-circle"></i> RESOLVED</span>',
+                        CLOSED: '<span class="label label-default" style="font-size: 11px;"><i class="fa fa-times-circle"></i> CLOSED</span>',
+                        WONT_FIX: '<span class="label label-default" style="font-size: 11px;"><i class="fa fa-ban"></i> WONT FIX</span>'
+                    }
+                    return badges[status] || `<span class="label label-info">${status}</span>`
                 }
             },
             {

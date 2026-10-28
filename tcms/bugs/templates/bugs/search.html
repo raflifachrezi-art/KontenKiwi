@@ -90,9 +90,17 @@
                 <input id="id_assignee" type="text" class="form-control" placeholder="{% trans 'Username' %}">
             </div>
 
-            <label class="col-md-1 col-lg-1" for="id_status">{% trans "Open" %}</label>
+            <label class="col-md-1 col-lg-1" for="id_status_code">{% trans "Status" %}</label>
             <div class="col-md-3 col-lg-3">
-                <input class="bootstrap-switch" id="id_status" type="checkbox" checked data-on-text="{% trans 'Yes' %}" data-off-text="{% trans 'No' %}">
+                <select class="form-control selectpicker" id="id_status_code">
+                    <option value="">{% trans "All Statuses" %}</option>
+                    <option value="OPEN">🔵 {% trans "Open" %}</option>
+                    <option value="IN_PROGRESS">🟡 {% trans "In Progress" %}</option>
+                    <option value="STUCK">🔴 {% trans "Stuck" %}</option>
+                    <option value="RESOLVED">🟢 {% trans "Resolved" %}</option>
+                    <option value="CLOSED">⚫ {% trans "Closed" %}</option>
+                    <option value="WONT_FIX">⚪ {% trans "Won't Fix" %}</option>
+                </select>
             </div>
         </div>
 
@@ -110,6 +118,7 @@
                 <tr>
                     <th>{% trans "ID" %}</th>
                     <th>{% trans "Severity" %}</th>
+                    <th>{% trans "Status" %}</th>
                     <th>{% trans "Summary" %}</th>
                     <th>{% trans "Created on" %}</th>
                     <th>{% trans "Product" %}</th>
