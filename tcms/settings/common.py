@@ -528,6 +528,11 @@ EXTERNAL_BUG_TRACKERS = [
 if "tcms.bugs.apps.AppConfig" in INSTALLED_APPS:
     EXTERNAL_BUG_TRACKERS.append("tcms.issuetracker.types.KiwiTCMS")
 
+# Monday.com integration settings (playbookmonday.md)
+MONDAY_API_TOKEN = os.environ.get("MONDAY_API_TOKEN", "")
+MONDAY_BOARD_ID = os.environ.get("MONDAY_BOARD_ID", "5030095856")
+MONDAY_BASE_URL = os.environ.get("MONDAY_BASE_URL", "https://konten.monday.com")
+
 # Enable the administrator delete permission
 # In another word it's set the admin to super user or not.
 SET_ADMIN_AS_SUPERUSER = False

@@ -18,5 +18,8 @@ services:
       KIWI_DB_USER: ${POSTGRES_USER:-postgres}
       KIWI_DB_PASSWORD: ${POSTGRES_PASSWORD:-12345678}
       KIWI_TENANTS_DOMAIN: ${KIWI_DOMAIN:-localhost}
+      MONDAY_API_TOKEN: ${MONDAY_API_TOKEN:-}
+      MONDAY_BOARD_ID: ${MONDAY_BOARD_ID:-5030095856}
+      MONDAY_BASE_URL: ${MONDAY_BASE_URL:-https://konten.monday.com}
     cap_drop:
       - ALL
